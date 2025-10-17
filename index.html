@@ -205,25 +205,24 @@ canvas{width:100%!important;height:300px!important;}
   
   <div id="output" class="plan" style="display:none"></div>
 </div>
-/*
+
 <script>
-  // Whop Integration
-  const urlParams = new URLSearchParams(window.location.search);
-  const whopUser = urlParams.get('whop_user');
+const _p = [80, 108, 97, 110, 84, 101, 115, 116, 50, 50, 49, 49, 63]; 
+const correctPassword = _p.map(c => String.fromCharCode(c)).join('');
 
-  if (!whopUser) {
-    alert("❌ Access denied. Please purchase access at https://whop.com/moneteer/");
-    window.location.href = "https://whop.com/moneteer/";
-    return;
-  }
-
-  // Optional: Store in localStorage for session persistence
-  localStorage.setItem('whop_user', whopUser);
-
-  // Optional: Show user ID in console for debugging
-  console.log("Whop User ID:", whopUser);
-</script>
-*/
+(function() {
+    const savedAuth = localStorage.getItem('businessPlanAuth');
+    if (!savedAuth || savedAuth !== correctPassword) {
+        const userInput = prompt("🔒 Enter your access password (check your email):");
+        if (userInput === correctPassword) {
+            localStorage.setItem('businessPlanAuth', correctPassword);
+        } else {
+            alert("❌ Access denied. Check your purchase email for password.\nStill stuck? Email moneteer808@gmail.com");
+            window.location.href = "https://moneteer.gumroad.com/l/vuhsc";
+            return;
+        }
+    }
+})();
 let chartInstances = {};
 
 function fmt(n, currency = 'USD', decimals = 0){
@@ -706,14 +705,13 @@ function generateInvestorPlan(){
         Email: [founder@${data.company.toLowerCase().replace(/\s+/g, '')}.com]<br>
         Phone: [+1 (555) 123-4567]<br>
         LinkedIn: [linkedin.com/in/founder-name]
-      </div>
-    </div>
-    
-    <!-- Brand Footer -->
-    <div style="text-align:center;margin:40px 0 0 0;font-size:14px;color:#6b7280; border-top:1px solid #e5e7eb; padding-top:20px;">
-      <p>Generated with <strong>Advanced Business Plan Generator</strong> by <a href="https://moneteer.gumroad.com" target="_blank" style="color:#3b82f6;text-decoration:underline;">Moneteer</a></p>
-      <p>Connect: <a href="mailto:moneteer808@gmail.com" style="color:#3b82f6;text-decoration:underline;">moneteer808@gmail.com</a></p>
-    </div>
+  </div>
+</div>
+<!-- Brand Footer -->
+<div style="text-align:center;margin:40px 0 0 0;font-size:14px;color:#6b7280; border-top:1px solid #e5e7eb; padding-top:20px;">
+  <p>Generated with <strong>Advanced Business Plan Generator</strong> by <a href="https://moneteer.gumroad.com" target="_blank" style="color:#3b82f6;text-decoration:underline;">Moneteer</a></p>
+  <p>Connect: <a href="mailto:moneteer808@gmail.com" style="color:#3b82f6;text-decoration:underline;">moneteer808@gmail.com</a></p>
+</div>
     `;
 
     document.getElementById('output').innerHTML = html;
@@ -919,265 +917,233 @@ function saveAsPDF() {
   const companyName = document.getElementById('company').value || 'Business';
   const today = new Date().toISOString().split('T')[0];
 
-  // Store original states
+  // Force ALL tabs to be visible for PDF capture
   const tabContents = document.querySelectorAll('.tab-content');
-  const tabsContainer = document.querySelector('.tabs');
   const originalDisplays = [];
-  
-  // Show all tab contents for PDF
   tabContents.forEach(tab => {
-    originalDisplays.push(tab.style.display);
+    originalDisplays.push({ tab, display: tab.style.display });
     tab.style.display = 'block';
+    tab.classList.add('active'); // Ensure content is rendered
   });
+
+  const tempStyle = document.createElement('style');
+  tempStyle.innerHTML = `
+    #output {
+      width: 210mm !important;
+      min-height: auto !important;
+      padding: 15px !important;
+      font-size: 10.5pt !important;
+      background: white !important;
+      page-break-inside: avoid;
+    }
+    .plan {
+      padding: 15px !important;
+      background: white !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+    .tabs { display: none !important; }
+    .button { display: none !important; }
+    table { font-size: 9.5pt !important; width: 100% !important; page-break-inside: avoid; }
+    th, td { page-break-inside: avoid; }
+    canvas { max-height: 180px !important; width: 100% !important; page-break-inside: avoid; }
+    .charts-grid { 
+      display: grid !important; 
+      grid-template-columns: 1fr 1fr !important; 
+      gap: 12px !important; 
+      page-break-inside: avoid;
+    }
+    .section-title { 
+      break-inside: avoid; 
+      page-break-after: avoid; 
+      page-break-inside: avoid;
+    }
+    .tab-content { 
+      break-inside: avoid; 
+      page-break-inside: avoid;
+      margin-bottom: 30mm; /* Add space to encourage page breaks */
+    }
+    .tab-content:not(:first-child) {
+      page-break-before: always; /* Force new page for each tab */
+    }
+    img.chart-image {
+      max-height: 180px;
+      width: 100%;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+  `;
+  document.head.appendChild(tempStyle);
+
+  // Convert charts to static images BEFORE capturing
+  const canvases = element.querySelectorAll('canvas');
+  const canvasData = [];
   
-  // Hide tabs UI
-  if (tabsContainer) tabsContainer.style.display = 'none';
+  canvases.forEach(canvas => {
+    if (chartInstances[canvas.id]) {
+      const img = document.createElement('img');
+      img.className = 'chart-image';
+      img.src = chartInstances[canvas.id].toBase64Image();
+      canvasData.push({ canvas, img });
+      canvas.parentNode.insertBefore(img, canvas);
+      canvas.style.display = 'none';
+    }
+  });
 
-  // Re-render charts
-  const data = {
-    monthlyCustomers: Number(document.getElementById('monthlyCustomers').value) || 0,
-    avgCustomerValue: Number(document.getElementById('avgCustomerValue').value) || 0,
-    cac: Number(document.getElementById('cac').value) || 0,
-    churnRate: Number(document.getElementById('churnRate').value) || 0,
-    variableCosts: Number(document.getElementById('variableCosts').value) || 0,
-    fixedCosts: Number(document.getElementById('fixedCosts').value) || 0,
-    marketingBudget: Number(document.getElementById('marketingBudget').value) || 0,
-    fundingAmount: Number(document.getElementById('fundingAmount').value) || 0
-  };
-  const projections = generateFinancialProjections(data);
-  createFinancialCharts(projections, document.getElementById('currency').value);
+  html2canvas(element, {
+    scale: 1.2,
+    useCORS: true,
+    logging: false,
+    windowWidth: 1240,
+    windowHeight: document.body.scrollHeight, // Capture full height
+    scrollY: -window.scrollY
+  }).then(canvas => {
+    const imgData = canvas.toDataURL('image/jpeg', 0.7);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 210;
+    const pageHeight = 297;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-  // Wait for charts to render
-  setTimeout(() => {
-    // Convert charts to images
-    const canvases = element.querySelectorAll('canvas');
-    const canvasReplacements = [];
-    
-    canvases.forEach(canvas => {
-      if (chartInstances[canvas.id]) {
-        const img = document.createElement('img');
-        img.src = chartInstances[canvas.id].toBase64Image();
-        img.style.width = '100%';
-        img.style.height = 'auto';
-        img.className = 'chart-image-pdf';
-        canvas.parentNode.insertBefore(img, canvas);
-        canvasReplacements.push({ canvas, img });
-        canvas.style.display = 'none';
-      }
-    });
+    let heightLeft = imgHeight;
+    let position = 0;
 
-    // Add PDF-specific styling
-    const tempStyle = document.createElement('style');
-    tempStyle.innerHTML = `
-      body, html {
-        margin: 0;
-        padding: 0;
-        background: white;
-        width: 210mm;
-      }
-      #output {
-        width: 190mm !important;
-        margin: 0 auto;
-        padding: 10mm 0 !important;
-        font-family: Arial, sans-serif !important;
-        font-size: 10pt !important;
-        line-height: 1.4 !important;
-        color: #000 !important;
-        background: white !important;
-      }
-      .tabs, .button, #pageTitle, .card { 
-        display: none !important; 
-      }
-      h1 { 
-        font-size: 18pt !important; 
-        margin-bottom: 5mm !important;
-        color: #000 !important;
-        text-align: center;
-      }
-      h2 { 
-        font-size: 14pt !important; 
-        margin: 8mm 0 3mm 0 !important;
-        color: #000 !important;
-      }
-      h3 {
-        font-size: 12pt !important;
-        margin: 5mm 0 2mm 0 !important;
-        color: #000 !important;
-      }
-      .section-title {
-        font-size: 16pt !important;
-        margin: 10mm 0 4mm 0 !important;
-        padding-bottom: 2mm !important;
-        color: #000 !important;
-        border-bottom: 1pt solid #ccc !important;
-      }
-      .subsection { 
-        font-size: 11pt !important; 
-        margin: 4mm 0 2mm 0 !important; 
-        color: #000 !important;
-      }
-      table {
-        font-size: 9pt !important;
-        width: 100% !important;
-        border-collapse: collapse;
-        margin: 3mm 0 5mm 0 !important;
-      }
-      th, td {
-        padding: 2mm !important;
-        border: 0.5pt solid #000 !important;
-      }
-      th {
-        background: #f0f0f0 !important;
-        font-weight: bold !important;
-      }
-      .metrics-grid, .competitive-grid, .team-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 3mm !important;
-        margin: 3mm 0 5mm 0 !important;
-      }
-      .risk-matrix {
-        grid-template-columns: 1fr !important;
-        gap: 2mm !important;
-      }
-      .metric-card, .competitor-card, .team-member, .risk-item {
-        padding: 3mm !important;
-        font-size: 9pt !important;
-        border: 0.5pt solid #ccc !important;
-      }
-      .metric-value {
-        font-size: 14pt !important;
-      }
-      .charts-grid {
-        grid-template-columns: 1fr !important;
-        gap: 5mm !important;
-        margin: 5mm 0 !important;
-      }
-      canvas, .chart-image-pdf {
-        height: 60mm !important;
-        width: 100% !important;
-      }
-      [contenteditable="true"] {
-        font-size: 10pt !important;
-        line-height: 1.4 !important;
-        color: #000 !important;
-        background: transparent !important;
-        border: none !important;
-        outline: none !important;
-        padding: 2mm !important;
-        margin: 2mm 0 !important;
-      }
-      .edit-hint {
-        font-size: 9pt !important;
-        color: #666 !important;
-        font-style: italic !important;
-      }
-      .alert {
-        border: 0.5pt solid #ccc !important;
-        background: #f9f9f9 !important;
-        box-shadow: none !important;
-        font-size: 9pt !important;
-        padding: 3mm !important;
-        margin: 3mm 0 !important;
-      }
-      .market-sizing {
-        background: #f0f0f0 !important;
-        color: #000 !important;
-        padding: 3mm !important;
-        font-size: 10pt !important;
-        margin: 3mm 0 5mm 0 !important;
-      }
-      .funding-timeline {
-        padding: 2mm !important;
-        margin: 3mm 0 5mm 0 !important;
-      }
-      .milestone {
-        font-size: 9pt !important;
-      }
-      .validation-evidence {
-        background: #f0f0f0 !important;
-        border: 0.5pt solid #ccc !important;
-        padding: 3mm !important;
-        margin: 3mm 0 5mm 0 !important;
-      }
-      .scenario-table {
-        margin: 3mm 0 5mm 0 !important;
-      }
-    `;
-    document.head.appendChild(tempStyle);
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
 
-    // Generate PDF
-    html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight + 20;
+      pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
+    }
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
+    pdf.save(`${companyName} Business Plan - ${today}.pdf`);
 
-      pdf.save(`${companyName} Business Plan - ${today}.pdf`);
-
-      // Cleanup - restore original state
-      tabContents.forEach((tab, i) => {
-        tab.style.display = originalDisplays[i];
-      });
-      
-      if (tabsContainer) tabsContainer.style.display = 'flex';
-      
-      canvasReplacements.forEach(replacement => {
-        if (replacement.img.parentNode) {
-          replacement.img.parentNode.removeChild(replacement.img);
-        }
-        replacement.canvas.style.display = '';
-      });
-      
-      if (tempStyle.parentNode) {
-        tempStyle.parentNode.removeChild(tempStyle);
-      }
-      
-      // Reactivate first tab
-      showTab('executive');
-    }).catch(error => {
-      console.error("PDF generation error:", error);
-      alert("Error generating PDF. Please try again.");
-      
-      // Cleanup on error too
-      tabContents.forEach((tab, i) => {
-        tab.style.display = originalDisplays[i];
-      });
-      
-      if (tabsContainer) tabsContainer.style.display = 'flex';
-      
-      canvasReplacements.forEach(replacement => {
-        if (replacement.img.parentNode) {
-          replacement.img.parentNode.removeChild(replacement.img);
-        }
-        replacement.canvas.style.display = '';
-      });
-      
-      if (tempStyle.parentNode) {
-        tempStyle.parentNode.removeChild(tempStyle);
-      }
-      
-      showTab('executive');
+    // CLEANUP: Restore original state
+    tabContents.forEach((tab, i) => {
+      tab.style.display = originalDisplays[i]?.display || '';
+      tab.classList.remove('active');
     });
+    
+    // Restore first tab as active
+    if (tabContents.length > 0) {
+      tabContents[0].classList.add('active');
+    }
+
+    // Remove temp style
+    document.head.removeChild(tempStyle);
+
+    // Restore canvases
+    canvasData.forEach(({canvas, img}) => {
+      if (img.parentNode) {
+        img.parentNode.removeChild(img);
+      }
+      canvas.style.display = '';
+    });
+
+  }).catch(error => {
+    console.error("PDF generation error:", error);
+    alert("Error generating PDF. Please try again or contact support.");
+    
+    // Ensure cleanup even on error
+    tabContents.forEach((tab, i) => {
+      tab.style.display = originalDisplays[i]?.display || '';
+    });
+    if (tabContents.length > 0) {
+      tabContents[0].classList.add('active');
+    }
+    const ts = document.querySelector('style[temp-pdf-style]');
+    if (ts) document.head.removeChild(ts);
+  });
+}
+
+function printAsPDF() {
+  const companyName = document.getElementById('company').value || 'Business';
+  const today = new Date().toLocaleDateString('en-CA');
+
+  // Force ALL tabs to be visible for printing
+  const tabContents = document.querySelectorAll('.tab-content');
+  const originalDisplays = [];
+  tabContents.forEach(tab => {
+    originalDisplays.push({ tab, display: tab.style.display });
+    tab.style.display = 'block';
+    tab.classList.add('active');
+  });
+
+  // Convert charts to images for printing
+  const chartContainers = document.querySelectorAll('.charts-grid');
+  const tempImages = [];
+
+  chartContainers.forEach(container => {
+    const canvases = container.querySelectorAll('canvas');
+    canvases.forEach(canvas => {
+      if (!chartInstances[canvas.id]) return;
+      const img = document.createElement('img');
+      img.src = chartInstances[canvas.id].toBase64Image();
+      img.style.cssText = 'width: 100%; max-height: 220px; margin: 10px 0; display: block; page-break-inside: avoid;';
+      canvas.parentNode.insertBefore(img, canvas.nextSibling);
+      tempImages.push(img);
+      canvas.style.display = 'none';
+    });
+  });
+
+  // Add print styles
+  const style = document.createElement('style');
+  style.id = 'temp-print-style';
+  style.innerHTML = `
+    @media print {
+      body { font-size: 10.5pt; line-height: 1.4; background: white; }
+      .card, #pageTitle, .button, .edit-hint, .tabs { display: none !important; }
+      .wrap { max-width: 100%; padding: 0; margin: 0; }
+      .plan { padding: 15px; background: white; box-shadow: none; }
+      table { font-size: 9.5pt; width: 100%; border-collapse: collapse; margin: 10px 0; page-break-inside: avoid; }
+      th, td { padding: 5px 6px; border: 1px solid #000; vertical-align: top; page-break-inside: avoid; }
+      h1 { font-size: 15pt; margin-bottom: 8px; }
+      h2 { font-size: 13pt; margin-top: 20px; margin-bottom: 6px; }
+      .section-title { break-before: always; margin-top: 30px; page-break-after: avoid; }
+      .tab-content { page-break-inside: avoid; }
+      .tab-content:not(:first-child) { page-break-before: always; }
+      img { page-break-inside: avoid; }
+    }
+    @page { margin: 0.5in; }
+  `;
+  document.head.appendChild(style);
+
+  // Add timestamp to signature
+  const signatureDiv = document.querySelector('div[style*="border-top:1px solid #e5e7eb"]');
+  if (signatureDiv) {
+    const timestamp = document.createElement('div');
+    timestamp.style.cssText = 'text-align: center; font-size: 8.5pt; color: #666; margin: 15px 0 5px;';
+    timestamp.textContent = `Printed on ${new Date().toLocaleString()} — Generated with Advanced Business Plan Generator`;
+    signatureDiv.parentNode.insertBefore(timestamp, signatureDiv);
+  }
+
+  window.print();
+
+  // Clean up
+  setTimeout(() => {
+    // Restore tab visibility
+    tabContents.forEach((tab, i) => {
+      tab.style.display = originalDisplays[i]?.display || '';
+    });
+    // Keep first tab active
+    if (tabContents.length > 0) {
+      tabContents[0].classList.add('active');
+    }
+
+    // Restore canvases
+    document.querySelectorAll('canvas').forEach(c => c.style.display = '');
+    tempImages.forEach(img => {
+      if (img.parentNode) img.parentNode.removeChild(img);
+    });
+
+    // Remove print styles
+    const printStyle = document.getElementById('temp-print-style');
+    if (printStyle) printStyle.parentNode.removeChild(printStyle);
+
+    // Remove timestamp
+    const ts = document.querySelector('div[style*="Printed on"]');
+    if (ts && ts.parentNode) ts.parentNode.removeChild(ts);
   }, 1000);
 }
 
@@ -1185,239 +1151,64 @@ function printAsPDF() {
   const companyName = document.getElementById('company').value || 'Business';
   const today = new Date().toLocaleDateString('en-CA');
 
-  // Store original states
-  const tabContents = document.querySelectorAll('.tab-content');
-  const tabsContainer = document.querySelector('.tabs');
-  const originalDisplays = [];
-  
-  // Show all tab contents for print
-  tabContents.forEach(tab => {
-    originalDisplays.push(tab.style.display);
-    tab.style.display = 'block';
-  });
-  
-  // Hide tabs UI
-  if (tabsContainer) tabsContainer.style.display = 'none';
+  // Convert charts to images for printing
+  const chartContainers = document.querySelectorAll('.charts-grid');
+  const tempImages = [];
 
-  // Re-render charts
-  const data = {
-    monthlyCustomers: Number(document.getElementById('monthlyCustomers').value) || 0,
-    avgCustomerValue: Number(document.getElementById('avgCustomerValue').value) || 0,
-    cac: Number(document.getElementById('cac').value) || 0,
-    churnRate: Number(document.getElementById('churnRate').value) || 0,
-    variableCosts: Number(document.getElementById('variableCosts').value) || 0,
-    fixedCosts: Number(document.getElementById('fixedCosts').value) || 0,
-    marketingBudget: Number(document.getElementById('marketingBudget').value) || 0,
-    fundingAmount: Number(document.getElementById('fundingAmount').value) || 0
-  };
-  const projections = generateFinancialProjections(data);
-  createFinancialCharts(projections, document.getElementById('currency').value);
-
-  // Wait for charts to render
-  setTimeout(() => {
-    // Convert charts to images
-    const canvases = document.querySelectorAll('canvas');
-    const canvasReplacements = [];
-    
+  chartContainers.forEach(container => {
+    const canvases = container.querySelectorAll('canvas');
     canvases.forEach(canvas => {
-      if (chartInstances[canvas.id]) {
-        const img = document.createElement('img');
-        img.src = chartInstances[canvas.id].toBase64Image();
-        img.style.width = '100%';
-        img.style.height = 'auto';
-        canvas.parentNode.insertBefore(img, canvas);
-        canvasReplacements.push({ canvas, img });
-        canvas.style.display = 'none';
-      }
+      if (!chartInstances[canvas.id]) return;
+
+      const img = document.createElement('img');
+      img.src = chartInstances[canvas.id].toBase64Image();
+      img.style.cssText = 'width: 100%; max-height: 220px; margin: 10px 0; display: block;';
+
+      canvas.parentNode.insertBefore(img, canvas.nextSibling);
+      tempImages.push(img);
+      canvas.style.display = 'none';
     });
+  });
 
-    // Add print styles
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @media print {
-        body, html {
-          margin: 0;
-          padding: 0;
-          width: 100%;
-          background: white;
-          font-family: Arial, sans-serif !important;
-          font-size: 10pt !important;
-          line-height: 1.4 !important;
-          color: #000 !important;
-        }
-        .card, #pageTitle, .button, .tabs { 
-          display: none !important; 
-        }
-        .plan { 
-          padding: 0 !important; 
-          background: white; 
-          box-shadow: none; 
-          border: none; 
-          width: 100% !important;
-        }
-        h1 { 
-          font-size: 18pt !important; 
-          margin-bottom: 5mm !important;
-          color: #000 !important;
-          text-align: center;
-        }
-        h2 { 
-          font-size: 14pt !important; 
-          margin: 8mm 0 3mm 0 !important;
-          color: #000 !important;
-        }
-        h3 {
-          font-size: 12pt !important;
-          margin: 5mm 0 2mm 0 !important;
-          color: #000 !important;
-        }
-        .section-title {
-          font-size: 16pt !important;
-          margin: 10mm 0 4mm 0 !important;
-          padding-bottom: 2mm !important;
-          color: #000 !important;
-          border-bottom: 1pt solid #ccc !important;
-        }
-        .subsection { 
-          font-size: 11pt !important; 
-          margin: 4mm 0 2mm 0 !important; 
-          color: #000 !important;
-        }
-        table {
-          font-size: 9pt !important;
-          width: 100% !important;
-          border-collapse: collapse;
-          margin: 3mm 0 5mm 0 !important;
-        }
-        th, td {
-          padding: 2mm !important;
-          border: 0.5pt solid #000 !important;
-        }
-        th {
-          background: #f0f0f0 !important;
-          font-weight: bold !important;
-        }
-        .metrics-grid, .competitive-grid, .team-grid {
-          grid-template-columns: repeat(2, 1fr) !important;
-          gap: 3mm !important;
-          margin: 3mm 0 5mm 0 !important;
-        }
-        .risk-matrix {
-          grid-template-columns: 1fr !important;
-          gap: 2mm !important;
-        }
-        .metric-card, .competitor-card, .team-member, .risk-item {
-          padding: 3mm !important;
-          font-size: 9pt !important;
-          border: 0.5pt solid #ccc !important;
-        }
-        .metric-value {
-          font-size: 14pt !important;
-        }
-        .charts-grid {
-          grid-template-columns: 1fr !important;
-          gap: 5mm !important;
-          margin: 5mm 0 !important;
-        }
-        canvas, img {
-          height: 60mm !important;
-          width: 100% !important;
-        }
-        [contenteditable="true"] {
-          font-size: 10pt !important;
-          line-height: 1.4 !important;
-          color: #000 !important;
-          background: transparent !important;
-          border: none !important;
-          outline: none !important;
-          padding: 2mm !important;
-          margin: 2mm 0 !important;
-        }
-        .edit-hint {
-          font-size: 9pt !important;
-          color: #666 !important;
-          font-style: italic !important;
-        }
-        .alert {
-          border: 0.5pt solid #ccc !important;
-          background: #f9f9f9 !important;
-          box-shadow: none !important;
-          font-size: 9pt !important;
-          padding: 3mm !important;
-          margin: 3mm 0 !important;
-        }
-        .market-sizing {
-          background: #f0f0f0 !important;
-          color: #000 !important;
-          padding: 3mm !important;
-          font-size: 10pt !important;
-          margin: 3mm 0 5mm 0 !important;
-        }
-        .funding-timeline {
-          padding: 2mm !important;
-          margin: 3mm 0 5mm 0 !important;
-        }
-        .milestone {
-          font-size: 9pt !important;
-        }
-        .validation-evidence {
-          background: #f0f0f0 !important;
-          border: 0.5pt solid #ccc !important;
-          padding: 3mm !important;
-          margin: 3mm 0 5mm 0 !important;
-        }
-        .scenario-table {
-          margin: 3mm 0 5mm 0 !important;
-        }
-      }
-      @page { 
-        margin: 15mm; 
-      }
-    `;
-    document.head.appendChild(style);
+  // Add print styles
+  const style = document.createElement('style');
+  style.innerHTML = `
+    @media print {
+      body { font-size: 10.5pt; line-height: 1.4; background: white; }
+      .card, #pageTitle, .button, .edit-hint, .tabs { display: none !important; }
+      .wrap { max-width: 100%; padding: 0; margin: 0; }
+      .plan { padding: 15px; background: white; box-shadow: none; }
+      table { font-size: 9.5pt; width: 100%; border-collapse: collapse; margin: 10px 0; }
+      th, td { padding: 5px 6px; border: 1px solid #000; vertical-align: top; }
+      h1 { font-size: 15pt; margin-bottom: 8px; }
+      h2 { font-size: 13pt; margin-top: 20px; margin-bottom: 6px; }
+      .section-title { break-before: always; margin-top: 30px; }
+      .generated-by { margin-top: 30px; font-size: 9pt; text-align: center; }
+    }
+    @page { margin: 0.5in; }
+  `;
+  document.head.appendChild(style);
 
-    // Add timestamp
+  // Add timestamp to signature
+  const signatureDiv = document.querySelector('div[style*="border-top:1px solid #e5e7eb"]');
+  if (signatureDiv) {
     const timestamp = document.createElement('div');
-    timestamp.style.cssText = 'text-align: center; font-size: 8pt; color: #666; margin: 5mm 0;';
-    timestamp.textContent = `Printed on ${new Date().toLocaleString()} — ${companyName} Business Plan`;
-    document.getElementById('output').appendChild(timestamp);
+    timestamp.style.cssText = 'text-align: center; font-size: 8.5pt; color: #666; margin: 15px 0 5px;';
+    timestamp.textContent = `Printed on ${new Date().toLocaleString()} — Generated with Advanced Business Plan Generator`;
+    signatureDiv.parentNode.insertBefore(timestamp, signatureDiv);
+  }
 
-    window.print();
+  window.print();
 
-    // Clean up after printing
-    setTimeout(() => {
-      // Restore original tab displays
-      tabContents.forEach((tab, i) => {
-        tab.style.display = originalDisplays[i];
-      });
-      
-      // Show tabs UI again
-      if (tabsContainer) tabsContainer.style.display = 'flex';
-      
-      // Remove print style
-      if (style.parentNode) {
-        style.parentNode.removeChild(style);
-      }
-      
-      // Remove chart images and show canvases again
-      canvasReplacements.forEach(replacement => {
-        if (replacement.img.parentNode) {
-          replacement.img.parentNode.removeChild(replacement.img);
-        }
-        replacement.canvas.style.display = '';
-      });
-      
-      // Remove timestamp
-      if (timestamp.parentNode) {
-        timestamp.parentNode.removeChild(timestamp);
-      }
-      
-      // Reactivate first tab
-      showTab('executive');
-    }, 500);
+  // Clean up
+  setTimeout(() => {
+    document.querySelectorAll('canvas').forEach(c => c.style.display = '');
+    tempImages.forEach(img => img.parentNode && img.parentNode.removeChild(img));
+    style.parentNode && style.parentNode.removeChild(style);
+    const ts = document.querySelector('div[style*="Printed on"]');
+    ts && ts.parentNode && ts.parentNode.removeChild(ts);
   }, 1000);
 }
-
 // Initialize with first generation
 document.addEventListener('DOMContentLoaded', function() {
   // Auto-generate on page load for demonstration
