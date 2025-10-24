@@ -213,16 +213,16 @@ const correctPassword = _p.map(c => String.fromCharCode(c)).join('');
 (function() {
     const savedAuth = localStorage.getItem('businessPlanAuth');
     if (!savedAuth || savedAuth !== correctPassword) {
-        const userInput = prompt("🔒 Enter your access password (check your email):");
+        const userInput = prompt("🔒 This is a private demo. To get instant access, please email me at moneteer808@gmail.com with the subject 'AdvanceBizPlan Access' and I'll send you the password!");
         if (userInput === correctPassword) {
             localStorage.setItem('businessPlanAuth', correctPassword);
         } else {
-            alert("❌ Access denied. Check your purchase email for password.\nStill stuck? Email moneteer808@gmail.com");
-            window.location.href = "https://moneteer.gumroad.com/l/vuhsc";
+            alert("❌ Incorrect or missing password.\n\nEmail moneteer808@gmail.com to request access!");
             return;
         }
     }
 })();
+
 let chartInstances = {};
 
 function fmt(n, currency = 'USD', decimals = 0){
