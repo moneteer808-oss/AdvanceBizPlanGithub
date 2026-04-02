@@ -60,36 +60,12 @@ canvas{width:100%!important;height:300px!important;}
 .tab.active{border-bottom-color:var(--accent);color:var(--accent);}
 .tab-content{display:none;}
 .tab-content.active{display:block;}
-
-/* Password Gate */
-#passwordGate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
-#passwordGate.hidden{display:none;}
-.gate-card{background:#fff;padding:40px 36px;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 8px 30px rgba(0,0,0,0.1);width:100%;max-width:380px;text-align:center;}
-.gate-card h2{margin:0 0 6px;color:var(--accent);font-size:22px;}
-.gate-card p{margin:0 0 24px;color:var(--muted);font-size:14px;}
-.gate-card input{margin-bottom:16px;}
-.gate-card .button{width:100%;margin:0;padding:13px;}
-#gateError{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px;}
-.gate-logo{font-size:32px;margin-bottom:12px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-
-<!-- Password Gate Overlay -->
-<div id="passwordGate">
-  <div class="gate-card">
-    <div class="gate-logo">📊</div>
-    <h2>Moneteer</h2>
-    <p>Business Plan Generator — press Enter or click below to continue.</p>
-    <input type="password" id="gateInput" placeholder="Password (or leave empty)" onkeydown="if(event.key==='Enter') unlockApp();" autofocus>
-    <button class="button" onclick="unlockApp()">Enter</button>
-    <div id="gateError"></div>
-  </div>
-</div>
-
 <div class="wrap">
   <h1 id="pageTitle">Investor-Ready Business Plan Generator</h1>
   <p class="lead">Create a comprehensive, investor-ready business plan with detailed financials, market analysis, and strategic insights.</p>
@@ -1238,30 +1214,10 @@ function printAsPDF() {
     ts && ts.parentNode && ts.parentNode.removeChild(ts);
   }, 1000);
 }
-// Password Gate
-const ALLOWED_PASSWORDS = ['', 'moneteer']; // empty = just press Enter
-
-function unlockApp() {
-  const input = document.getElementById('gateInput').value.trim().toLowerCase();
-  if (ALLOWED_PASSWORDS.includes(input)) {
-    document.getElementById('passwordGate').classList.add('hidden');
-    sessionStorage.setItem('unlocked', '1');
-    generateInvestorPlan();
-  } else {
-    document.getElementById('gateError').textContent = 'Incorrect password. Try again.';
-    document.getElementById('gateInput').value = '';
-    document.getElementById('gateInput').focus();
-  }
-}
-
 // Initialize with first generation
 document.addEventListener('DOMContentLoaded', function() {
-  // If already unlocked this session, skip gate
-  if (sessionStorage.getItem('unlocked') === '1') {
-    document.getElementById('passwordGate').classList.add('hidden');
-    setTimeout(() => generateInvestorPlan(), 500);
-  }
-  // Otherwise wait for user to click Enter on the gate
+  // Auto-generate on page load for demonstration
+  setTimeout(() => generateInvestorPlan(), 500);
 });
 </script>
 </body>
